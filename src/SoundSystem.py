@@ -1,4 +1,9 @@
 from threading import Thread
+from openal.audio import *
+from openal.loaders import load_wav_file
+
+from openal import al, alc
+
 from conf.Config import Config
 from openal import *
 
@@ -13,7 +18,7 @@ class BackgroundMusic(Thread):
     @staticmethod
     def read_music_filenames():
         music_dirs = list(
-            map(lambda x: os.path.abspath(os.path.join(Config.MUSIC_DIR, x)), os.listdir(Config.MUSIC_DIR)))
+            map(lambda x: os.path.abspath(os.path.join(Config.MUSIC_DIR, x.directory)), Config.PHASES))
         phases = []
         for m_dir in music_dirs:
             paths = list(pathlib.Path(m_dir).glob('**/*'))
@@ -24,46 +29,54 @@ class BackgroundMusic(Thread):
     def __init__(self):
         super().__init__()
         self.phases = BackgroundMusic.read_music_filenames()
+        self.audio = pyaudio.PyAudio()
+
+    def __del__(self):
+        self.audio.terminate()
 
     def run(self):
-        song_a = str(self.phases[0][0])
-
         # data, samplerate = soundfile.read(song_a)
         # soundfile.write(song_a, data, samplerate)
 
-        with wave.open(song_a, 'rb') as wf:
-            p = pyaudio.PyAudio()
-            stream = p.open(
-                format=p.get_format_from_width(wf.getsampwidth()),
-                channels=wf.getnchannels(),
-                rate=wf.getframerate(),
-                output=True
-            )
+        for phase in self.phases:
+            for song in phase:
+                with wave.open(str(song), 'rb') as wf:
+                    stream = self.audio.open(
+                        format=self.audio.get_format_from_width(wf.getsampwidth()),
+                        channels=wf.getnchannels(),
+                        rate=wf.getframerate(),
+                        output=True
+                    )
 
-            while len(data := wf.readframes(Config.CHUNK_SIZE)):
-                stream.write(data)
+                    while len(data := wf.readframes(Config.CHUNK_SIZE)):
+                        stream.write(data)
 
-            stream.close()
-            p.terminate()
+                    stream.close()
+
 
 class SfxSound(Thread):
     @staticmethod
     def get_absolute_sfx_filepath(f):
         return os.path.abspath(os.path.join(Config.SFX_DIR, f))
 
-    def __init__(self, f, x=0, y=0, distance=0):
+    def __init__(self, filename):
         super().__init__()
-        self.filename = SfxSound.get_absolute_sfx_filepath(f)
-        self.x = x
-        self.y = y
-        self.distance = distance
+        self.filename = SfxSound.get_absolute_sfx_filepath(filename)
+        self.sink = SoundSink()
+        self.sink.listener = SoundListener()
 
     def run(self):
+        """
         source = oalOpen(str(self.filename))
         source.play()
         while source.get_state() == AL_PLAYING:
             time.sleep(1)
         oalQuit()
+        source = SoundSource()
+        wav = load_wav_file(str(self.filename))
+        source.queue(wav)
+        self.sink.play(source)
+        """
 
 
 if __name__ == "__main__":
