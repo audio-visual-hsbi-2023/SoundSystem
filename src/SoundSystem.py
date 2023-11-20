@@ -1,20 +1,32 @@
 from threading import Thread
 from openal.audio import *
 from openal.loaders import load_wav_file
-
 from openal import al, alc
-
 from conf.Config import Config
 from openal import *
+from pydub import AudioSegment
 
 import os
 import pathlib
 import wave
 import pyaudio
 import time
+import random
+import math
 
 
 class BackgroundMusic(Thread):
+    @staticmethod
+    def _audio_segment_into_chunks(segment: AudioSegment):
+        cs = Config.CHUNK_SIZE
+        data = segment.raw_data
+        i = 0
+        chunks = []
+        while i < len(data):
+            chunks.append(data[i:i + cs])
+            i += cs
+        return chunks
+
     @staticmethod
     def read_music_filenames():
         music_dirs = list(
@@ -23,6 +35,7 @@ class BackgroundMusic(Thread):
         for m_dir in music_dirs:
             paths = list(pathlib.Path(m_dir).glob('**/*'))
             abs_paths = list(map(lambda x: x.absolute(), paths))
+            # random.shuffle(abs_paths)
             phases.append(abs_paths)
         return phases
 
@@ -48,8 +61,14 @@ class BackgroundMusic(Thread):
                         output=True
                     )
 
-                    while len(data := wf.readframes(Config.CHUNK_SIZE)):
-                        stream.write(data)
+                    song = AudioSegment.from_wav(str(song))
+                    r_song = song.reverse()
+                    assert(song.raw_data != r_song.raw_data)
+                    chunks = BackgroundMusic._audio_segment_into_chunks(r_song)
+                    for chunk in chunks:
+                        stream.write(chunk)
+                    # while len(data := wf.readframes(Config.CHUNK_SIZE)):
+                    #    stream.write(data)
 
                     stream.close()
 
