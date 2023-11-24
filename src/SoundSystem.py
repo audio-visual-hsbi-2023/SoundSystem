@@ -1,5 +1,6 @@
 import time
 
+from src.command.CommandCenter import CommandCenter
 from src.sound.music.BackgroundMusic import BackgroundMusic
 from src.sound.sfx.SfxSound import SfxSound
 
