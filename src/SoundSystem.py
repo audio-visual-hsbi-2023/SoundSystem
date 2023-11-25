@@ -1,21 +1,31 @@
-import time
+import logging
 
-from src.command.CommandCenter import CommandCenter
+from queue import Queue
+
+from src.server.SoundSystemServer import SoundSystemServer
 from src.sound.music.BackgroundMusic import BackgroundMusic
-from src.sound.sfx.SfxSound import SfxSound
 
-if __name__ == "__main__":
+
+def main():
+    data_queue = Queue()
+    server = SoundSystemServer(data_queue)
     bgm = BackgroundMusic()
 
-    print("Start playing background music...")
+    logging.debug("Starting background threads for server and music...")
+    server.start()
     bgm.start()
     bgm.play_music()
 
-    print("wait a moment...")
-    for i in range(1, 3):
-        print(i)
-        time.sleep(1)
+    while True:
+        logging.debug("waiting for incoming command...")
+        data = data_queue.get()
+        logging.debug(f"Received data:\n{data}")
 
-    print("Play bird tweeting on the left...")
-    sfx = SfxSound(filename="birds.wav", panning=-1.0)
-    sfx.start()
+
+# ---------------------------------------
+# ---------------------------------------
+# ---------------------------------------
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+    main()
