@@ -60,10 +60,19 @@ class BackgroundMusic(Thread):
     def next_song(self):
         self.next_song_event.set()
 
+    def next_phase(self):
+        self.next_phase_event.set()
+
     def run(self):
         phase_ctr = 0
         song_ctr = 0
         while True:
+            if self.next_phase_event.is_set():
+                phase_ctr += 1
+                if phase_ctr > len(self.phases):
+                    phase_ctr = 0
+                self.next_phase_event.clear()
+
             phase = self.phases[phase_ctr]
             song = phase[song_ctr]
             was_queued = False
@@ -71,6 +80,11 @@ class BackgroundMusic(Thread):
             if not self.song_queue.empty():
                 song = self.song_queue.get()
                 was_queued = True
+            elif self.next_song_event.is_set():
+                song_ctr += 1
+                if song_ctr > len(phase):
+                    song_ctr = 0
+                self.next_song_event.clear()
 
             audio = AudioSegment.from_wav(str(song))[-3000:]
 

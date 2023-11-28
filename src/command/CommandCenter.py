@@ -5,7 +5,7 @@ import re
 
 
 class CommandType(enum.Enum):
-    MUSIC = 1
+    NEXT_SONG = 1
     SFX = 2
     PHASE_CHANGE = 3
     START = 4
@@ -32,8 +32,8 @@ class Command:
         str_value = tokens[1]
         num_value = int(tokens[2])
 
-        if re.match(CommandCenter.MUSIC_REGEX, string):
-            command_type = CommandType.MUSIC
+        if re.match(CommandCenter.NEXT_SONG_REGEX, string):
+            command_type = CommandType.NEXT_SONG
         elif re.match(CommandCenter.SFX_REGEX, string):
             command_type = CommandType.SFX
         elif re.match(CommandCenter.START_REGEX, string):
@@ -55,17 +55,12 @@ class Command:
 
 class CommandCenter:
     BASIC_REGEX = r".*;.*;[0-9]+$"
-    MUSIC_REGEX = r"^(PLAY_MUSIC|NEXT_SONG|PAUSE_SONG);_;0$"
+    NEXT_SONG_REGEX = r"^NEXT_SONG;_;0$"
     SFX_REGEX = r"^PLAY_SFX;.{1,50};(-?[0-9]|[1-8][0-9]|90)$"
     PHASE_CHANGE_REGEX = r"^PHASE_CHANGE;_;([1-5])$"
     EXIT_REGEX = r"^EXIT;_;0$"
     START_REGEX = r"^START;_;0$"
 
-    AVAILABLE_SFX = list(
-        map(
-            lambda x: f"{x}.wav",
-            [
-                "birds"
-            ]
-        )
-    )
+    AVAILABLE_SFX = [
+        "birds"
+    ]
