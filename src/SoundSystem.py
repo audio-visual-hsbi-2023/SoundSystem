@@ -3,8 +3,8 @@ import argparse
 
 from queue import Queue
 
-from command.CommandCenter import Command, CommandType, CommandCenter
-from sound.sfx.SfxSound import SfxSound
+from src.command.CommandCenter import Command, CommandType, CommandCenter
+from src.sound.sfx.SfxSound import SfxSound
 from src.server.SoundSystemServer import SoundSystemServer
 from src.sound.music.BackgroundMusic import BackgroundMusic
 
@@ -16,7 +16,7 @@ def create_cli_interface():
                     "and queries sfx sounds on a 180 degree spectrum over"
                     "network requests"
     )
-    parser.add_argument("-l", "--level")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-d", "--dummy", action="store_true")
 
 

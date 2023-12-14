@@ -63,6 +63,13 @@ class BackgroundMusic(Thread):
     def next_phase(self):
         self.next_phase_event.set()
 
+    # TODO properly implement transition
+    # Take from current last three seconds of current song
+    # determine next song: either pick next of current phase or if there is a phase change
+    # go and take the first song from the next phase
+    # append next song to the 3secs extracted from current song
+    # use the chunks of the appended audio and play that
+
     def run(self):
         phase_ctr = 0
         song_ctr = 0
@@ -77,6 +84,7 @@ class BackgroundMusic(Thread):
             song = phase[song_ctr]
             was_queued = False
 
+            '''
             if not self.song_queue.empty():
                 song = self.song_queue.get()
                 was_queued = True
@@ -85,8 +93,9 @@ class BackgroundMusic(Thread):
                 if song_ctr > len(phase):
                     song_ctr = 0
                 self.next_song_event.clear()
+            '''
 
-            audio = AudioSegment.from_wav(str(song))[-3000:]
+            audio = AudioSegment.from_wav(str(song))[30000:-10000]
 
             stream = self.audio.open(
                 format=self.audio.get_format_from_width(audio.sample_width),
@@ -108,6 +117,15 @@ class BackgroundMusic(Thread):
                     if song_ctr == len(phase):
                         random.shuffle(phase)
                         song_ctr = 0
+
+                    next_audio = AudioSegment.from_wav(str(phase[song_ctr]))[:Config.CROSSFADE_TIME]
+                    # TODO implement mechanism too check if there are 3 secs left to crossfade
+                    current_lasts = audio[chunk_ctr:chunk_ctr+Config.CROSSFADE_TIME+1]
+                    crossfade = current_lasts.append(next_audio, crossfade=Config.CROSSFADE_TIME)
+                    crossfade_chunks = AudioSegmentHelper.into_chunks(crossfade)
+                    for chunk in crossfade_chunks:
+                        stream.write(chunk)
+
                     self.next_song_event.clear()
                     break
                 elif self.next_phase_event.is_set():
