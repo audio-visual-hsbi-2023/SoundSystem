@@ -11,7 +11,8 @@ from src.sound import AudioSegmentHelper
 class SfxSound(Thread):
     @staticmethod
     def get_absolute_sfx_filepath(f):
-        return os.path.abspath(os.path.join(Config.SFX_DIR, f))
+        f_t = f + ".wav"
+        return os.path.abspath(os.path.join(Config.SFX_DIR, f_t))
 
     def __init__(self, filename, panning=0.0):
         super().__init__()
