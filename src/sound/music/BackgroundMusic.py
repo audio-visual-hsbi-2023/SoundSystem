@@ -144,14 +144,6 @@ class BackgroundMusic(Thread):
                 stream.write(chunks[chunk_ctr])
                 chunk_ctr += 1
 
-                # TODO figure out how calculating between data_size and milliseconds works
-                # This is needed so a new song transition can be started before hand so
-                # a transition happens not just when NEXT_SONG comes in between
-                '''
-                if chunk_ctr >= len(chunks) - self.ms_ctr * (Config.CROSSFADE_TIME + 1500):
-                    self.next_song()
-                '''
-
                 if (((len(chunks) - 1) * Config.CHUNK_SIZE) - self.ms_ctr * (Config.CROSSFADE_TIME + 1500)) <= \
                         chunk_ctr * Config.CHUNK_SIZE <= \
                         ((len(chunks) * Config.CHUNK_SIZE) - (self.ms_ctr * (Config.CROSSFADE_TIME + 1500))):
