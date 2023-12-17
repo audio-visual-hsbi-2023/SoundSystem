@@ -61,6 +61,7 @@ class BackgroundMusic(Thread):
         self.current_phase = self.phases[self.phase_ctr]
         random.shuffle(self.current_phase)
         self.segment = None
+        self.ms_ctr = 0
         self.loading = False
 
         self.profiler = Profiler()
@@ -101,6 +102,7 @@ class BackgroundMusic(Thread):
         song = self.current_phase[self.song_ctr]
         # TODO remove magic numbers
         self.segment = AudioSegmentHelper.load_audio_segment(str(song))[-20000:-10000]
+        self.ms_ctr = AudioSegmentHelper.ms_to_segment_chunk_index(self.segment, 1)
         while True:
             stream = self.audio.open(
                 format=self.audio.get_format_from_width(self.segment.sample_width),
@@ -145,7 +147,14 @@ class BackgroundMusic(Thread):
                 # TODO figure out how calculating between data_size and milliseconds works
                 # This is needed so a new song transition can be started before hand so
                 # a transition happens not just when NEXT_SONG comes in between
-                if chunk_ctr == len(chunks):
+                '''
+                if chunk_ctr >= len(chunks) - self.ms_ctr * (Config.CROSSFADE_TIME + 1500):
+                    self.next_song()
+                '''
+
+                if (((len(chunks) - 1) * Config.CHUNK_SIZE) - self.ms_ctr * (Config.CROSSFADE_TIME + 1500)) <= \
+                        chunk_ctr * Config.CHUNK_SIZE <= \
+                        ((len(chunks) * Config.CHUNK_SIZE) - (self.ms_ctr * (Config.CROSSFADE_TIME + 1500))):
                     self.next_song()
 
                 # END OF WHILE (chunks)

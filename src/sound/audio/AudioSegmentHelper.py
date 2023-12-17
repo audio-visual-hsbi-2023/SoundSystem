@@ -24,3 +24,7 @@ def load_audio_segment(filename) -> AudioSegment:
         raise ValueError("Loader returned None data")
 
     return data
+
+
+def ms_to_segment_chunk_index(segment: AudioSegment, ms):
+    return int(segment.frame_count(ms) * segment.frame_width)
