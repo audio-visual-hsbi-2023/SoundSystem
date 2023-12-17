@@ -38,6 +38,12 @@ class BackgroundMusic(Thread):
         self.next_song_event = Event()
         self.next_phase_event = Event()
 
+        self.phase_ctr = 0
+        self.song_ctr = 0
+        self.current_phase = self.phases[self.phase_ctr]
+        random.shuffle(self.current_phase)
+        self.segment = None
+
     def __del__(self):
         self.audio.terminate()
 
@@ -63,75 +69,43 @@ class BackgroundMusic(Thread):
     def next_phase(self):
         self.next_phase_event.set()
 
-    # TODO properly implement transition
-    # Take from current last three seconds of current song
-    # determine next song: either pick next of current phase or if there is a phase change
-    # go and take the first song from the next phase
-    # append next song to the 3secs extracted from current song
-    # use the chunks of the appended audio and play that
+    def update_song_ctr(self):
+        self.song_ctr += 1
+        if self.song_ctr == len(self.current_phase):
+            self.song_ctr = 0
+            random.shuffle(self.current_phase)
 
     def run(self):
-        phase_ctr = 0
-        song_ctr = 0
+        self.current_phase = self.phases[self.phase_ctr]
+        song = self.current_phase[self.song_ctr]
+        # TODO remove magic numbers
+        self.segment = AudioSegment.from_wav(str(song))[30000:-10000]
         while True:
-            if self.next_phase_event.is_set():
-                phase_ctr += 1
-                if phase_ctr > len(self.phases):
-                    phase_ctr = 0
-                self.next_phase_event.clear()
-
-            phase = self.phases[phase_ctr]
-            song = phase[song_ctr]
-            was_queued = False
-
-            '''
-            if not self.song_queue.empty():
-                song = self.song_queue.get()
-                was_queued = True
-            elif self.next_song_event.is_set():
-                song_ctr += 1
-                if song_ctr > len(phase):
-                    song_ctr = 0
-                self.next_song_event.clear()
-            '''
-
-            audio = AudioSegment.from_wav(str(song))[30000:-10000]
-
             stream = self.audio.open(
-                format=self.audio.get_format_from_width(audio.sample_width),
-                channels=audio.channels,
-                rate=audio.frame_rate,
+                format=self.audio.get_format_from_width(self.segment.sample_width),
+                channels=self.segment.channels,
+                rate=self.segment.frame_rate,
                 output=True
             )
 
-            chunks = AudioSegmentHelper.into_chunks(audio)
+            chunks = AudioSegmentHelper.into_chunks(self.segment)
             chunk_ctr = 0
 
-            # TODO implement transitions between songs
             while chunk_ctr <= len(chunks):
+                change = False
+                if self.next_phase_event.is_set():
+                    self.phase_ctr += 1
+                    self.next_phase_event.clear()
+                    change = True
+                if self.next_song_event.is_set():
+                    self.update_song_ctr()
+                    self.next_song_event.clear()
+                    change = True
+                if change:
+                    break
+
                 if self.pause_event.is_set():
                     continue
-                elif self.next_song_event.is_set():
-                    if not was_queued:
-                        song_ctr += 1
-                    if song_ctr == len(phase):
-                        random.shuffle(phase)
-                        song_ctr = 0
-
-                    next_audio = AudioSegment.from_wav(str(phase[song_ctr]))[:Config.CROSSFADE_TIME]
-                    # TODO implement mechanism too check if there are 3 secs left to crossfade
-                    current_lasts = audio[chunk_ctr:chunk_ctr+Config.CROSSFADE_TIME+1]
-                    crossfade = current_lasts.append(next_audio, crossfade=Config.CROSSFADE_TIME)
-                    crossfade_chunks = AudioSegmentHelper.into_chunks(crossfade)
-                    for chunk in crossfade_chunks:
-                        stream.write(chunk)
-
-                    self.next_song_event.clear()
-                    break
-                elif self.next_phase_event.is_set():
-                    phase_ctr += 1
-                    self.next_phase_event.clear()
-                    break
 
                 stream.write(chunks[chunk_ctr])
                 chunk_ctr += 1
@@ -139,8 +113,17 @@ class BackgroundMusic(Thread):
                 if chunk_ctr == len(chunks):
                     self.next_song()
 
+                # END OF WHILE (chunks)
+
             stream.close()
-            if phase_ctr == len(self.phases):
+            if self.phase_ctr == len(self.phases):
                 break
+
+            current_audio_end = self.segment._spawn(chunks[chunk_ctr:])[:Config.CROSSFADE_TIME]
+            # TODO remove magic numbers
+            next_audio = AudioSegment.from_wav(str(self.current_phase[self.song_ctr]))[30000:-10000]
+            self.segment = current_audio_end.append(next_audio, crossfade=Config.CROSSFADE_TIME)
+
+        # END OF WHILE
 
         logging.debug("Phases done. End Music...")
