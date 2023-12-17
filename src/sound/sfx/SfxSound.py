@@ -5,7 +5,7 @@ import pyaudio
 from pydub import AudioSegment
 
 from src.conf.Config import Config
-from src.sound import AudioSegmentHelper
+from sound.audio import AudioSegmentHelper
 
 
 class SfxSound(Thread):

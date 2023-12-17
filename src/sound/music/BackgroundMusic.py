@@ -6,10 +6,28 @@ from queue import Queue
 from threading import Thread, Event
 
 import pyaudio
+import time
 from pydub import AudioSegment
 
+from src.sound.audio.AudioSegmentAsyncLoader import AudioSegmentAsyncLoader
 from src.conf.Config import Config
-from src.sound import AudioSegmentHelper
+from src.sound.audio import AudioSegmentHelper
+
+
+class Profiler:
+    def __init__(self):
+        self.start_stamp = 0
+        self.end_stamp = 0
+
+    def start(self):
+        self.start_stamp = time.perf_counter()
+
+    def end(self):
+        self.end_stamp = time.perf_counter()
+
+    @property
+    def time_elapsed(self):
+        return self.end_stamp - self.start_stamp
 
 
 class BackgroundMusic(Thread):
@@ -43,6 +61,9 @@ class BackgroundMusic(Thread):
         self.current_phase = self.phases[self.phase_ctr]
         random.shuffle(self.current_phase)
         self.segment = None
+        self.loading = False
+
+        self.profiler = Profiler()
 
     def __del__(self):
         self.audio.terminate()
@@ -71,7 +92,7 @@ class BackgroundMusic(Thread):
 
     def update_song_ctr(self):
         self.song_ctr += 1
-        if self.song_ctr == len(self.current_phase):
+        if self.song_ctr >= len(self.current_phase):
             self.song_ctr = 0
             random.shuffle(self.current_phase)
 
@@ -79,7 +100,7 @@ class BackgroundMusic(Thread):
         self.current_phase = self.phases[self.phase_ctr]
         song = self.current_phase[self.song_ctr]
         # TODO remove magic numbers
-        self.segment = AudioSegment.from_wav(str(song))[30000:-10000]
+        self.segment = AudioSegmentHelper.load_audio_segment(str(song))[-20000:-10000]
         while True:
             stream = self.audio.open(
                 format=self.audio.get_format_from_width(self.segment.sample_width),
@@ -90,8 +111,14 @@ class BackgroundMusic(Thread):
 
             chunks = AudioSegmentHelper.into_chunks(self.segment)
             chunk_ctr = 0
-
+            self.loading = None
+            loader: AudioSegmentAsyncLoader | None = None
             while chunk_ctr <= len(chunks):
+                if loader is not None and self.loading and not loader.is_alive():
+                    self.loading = False
+                    self.profiler.start()
+                    break
+
                 change = False
                 if self.next_phase_event.is_set():
                     self.phase_ctr += 1
@@ -102,28 +129,47 @@ class BackgroundMusic(Thread):
                     self.next_song_event.clear()
                     change = True
                 if change:
-                    break
+                    loader = AudioSegmentAsyncLoader(str(self.current_phase[self.song_ctr]))
+                    loader.start()
+                    self.loading = True
 
                 if self.pause_event.is_set():
                     continue
 
+                if chunk_ctr >= len(chunks) and loader.is_alive():
+                    break
+
                 stream.write(chunks[chunk_ctr])
                 chunk_ctr += 1
 
+                # TODO figure out how calculating between data_size and milliseconds works
+                # This is needed so a new song transition can be started before hand so
+                # a transition happens not just when NEXT_SONG comes in between
                 if chunk_ctr == len(chunks):
                     self.next_song()
 
                 # END OF WHILE (chunks)
+                # ---------------------
 
             stream.close()
             if self.phase_ctr == len(self.phases):
                 break
 
+            if loader is None:
+                raise ValueError("No data loaded")
+
+            while loader.is_alive():
+                # Wait until audio is loaded
+                pass
+
             current_audio_end = self.segment._spawn(chunks[chunk_ctr:])[:Config.CROSSFADE_TIME]
             # TODO remove magic numbers
-            next_audio = AudioSegment.from_wav(str(self.current_phase[self.song_ctr]))[30000:-10000]
+            next_audio = loader.audio_data
             self.segment = current_audio_end.append(next_audio, crossfade=Config.CROSSFADE_TIME)
+            self.profiler.end()
+            logging.debug(f"Time elapsed for preparing new audio segment {self.profiler.time_elapsed}")
 
         # END OF WHILE
+        # ------------
 
         logging.debug("Phases done. End Music...")
