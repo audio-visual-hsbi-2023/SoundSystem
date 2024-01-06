@@ -7,8 +7,9 @@ The best way is to simply start intelliJ and run the ```SoundSystem.oy``` file.
 
 ## Connect to System 💻
 
-The Server communicates through a simple TCP socket. Simply create a TCP
-connection to the Server with the below listed network parameters.
+The Server communicates through the OCP protocol.
+
+A simple UDP Client that sends OSC messages is enough to connect to the server.
 
 Only a localhost connection is needed, but can configured to actually communicate over network.
 
@@ -16,8 +17,6 @@ Only a localhost connection is needed, but can configured to actually communicat
     URL: 127.0.0.1
 
 These values can be configured in the ```src/server/SoundSystemServer.py``` file.
-
-After sending a command to the Server close the connection. Open a connection for every command.
 
 ## Available commands 💬
 
