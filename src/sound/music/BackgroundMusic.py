@@ -118,7 +118,6 @@ class BackgroundMusic(Thread):
             while chunk_ctr <= len(chunks):
                 if loader is not None and self.loading and not loader.is_alive():
                     self.loading = False
-                    self.profiler.start()
                     break
 
                 change = False
@@ -163,10 +162,10 @@ class BackgroundMusic(Thread):
                 # Wait until audio is loaded
                 pass
 
-            current_audio_end = self.segment._spawn(chunks[chunk_ctr:])[:Config.CROSSFADE_TIME]
-            # TODO remove magic numbers
-            next_audio = loader.audio_data
-            self.segment = current_audio_end.append(next_audio, crossfade=Config.CROSSFADE_TIME)
+            self.profiler.start()
+            ctr_in_ms = (chunk_ctr * Config.CHUNK_SIZE) / self.ms_ctr
+            current_audio_end = self.segment[ctr_in_ms:(ctr_in_ms+Config.CROSSFADE_TIME)]
+            self.segment = current_audio_end.append(loader.audio_data, crossfade=Config.CROSSFADE_TIME)
             self.profiler.end()
             logging.debug(f"Time elapsed for preparing new audio segment {self.profiler.time_elapsed}")
 
