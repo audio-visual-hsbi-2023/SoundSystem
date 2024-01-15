@@ -65,6 +65,7 @@ class BackgroundMusic(Thread):
         self.loading = False
 
         self.profiler = Profiler()
+        self.pause_music()
 
     def __del__(self):
         self.audio.terminate()

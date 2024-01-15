@@ -57,10 +57,28 @@ class CommandCenter:
     BASIC_REGEX = r".*;.*;[0-9]+$"
     NEXT_SONG_REGEX = r"^NEXT_SONG;_;0$"
     SFX_REGEX = r"^PLAY_SFX;.{1,50};(-?[0-9]|[1-8][0-9]|90)$"
-    PHASE_CHANGE_REGEX = r"^PHASE_CHANGE;_;([1-5])$"
+    PHASE_CHANGE_REGEX = r"^PHASE_CHANGE;_;0$"
     EXIT_REGEX = r"^EXIT;_;0$"
     START_REGEX = r"^START;_;0$"
 
-    AVAILABLE_SFX = [
-        "birds"
-    ]
+    sfx = """a_calm_ambient
+bells_soft
+bell_ambient
+birds
+cymbal_impact
+dreaming_forest
+enchanted
+forest
+it_s_morning
+journey_through_space
+keys_of_relaxation
+lifting_guitar
+metal_grinding
+metal_whoosh_ambient
+piano_ambient
+ping_contact
+sharp
+short_logo
+sisters_voices
+soft_rain_umbrella""".split("\n")
+    AVAILABLE_SFX = list(map(lambda x: x.strip(), sfx))

@@ -1,16 +1,26 @@
-import socket
+from pythonosc import udp_client
+from src.server.SoundSystemServer import SoundSystemServer
 
-# from src.server.SoundSystemServer import SoundSystemServer
-
-
-HOST = "127.0.0.1" # SoundSystemServer.DEFAULT_IP
-PORT = 8999 # SoundSystemServer.DEFAULT_PORT
+HOST = SoundSystemServer.DEFAULT_IP
+PORT = SoundSystemServer.DEFAULT_PORT
 
 if __name__ == "__main__":
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((HOST, PORT))
-        s.sendall(b"NEXT_SONG;_;0$")
-        # s.sendall(b"PLAY_SFX;birds;0$")
-        data = s.recv(1024)
+    msgs = [
+        "START;_;0$",
+        "EXIT;_;0$",
+        "NEXT_SONG;_;0$",
+        "PHASE_CHANGE;_;0$",
+        "PLAY_SFX;cymbal_impact;90$",
+    ]
+    print("Please select one of the following commands:")
+    i = 0
+    while i < len(msgs):
+        print(f"[{i}]: {msgs[i]}")
+        i += 1
+    number = int(input(">>> "))
 
-    print(f"Received {data!r}")
+    client = udp_client.SimpleUDPClient(HOST, PORT)
+    msg = msgs[number]
+
+    print(f'Sending message "{msg}"')
+    client.send_message("/command", msg)
