@@ -97,6 +97,17 @@ class BackgroundMusic(Thread):
             self.song_ctr = 0
             random.shuffle(self.current_phase)
 
+    def update_phase(self):
+        # check if already is at last phase
+        if self.phase_ctr == len(self.phases) - 1:
+            logging.error("Can't continue with p hases. Already the last!")
+            return
+
+        self.phase_ctr += 1
+        self.current_phase = self.phases[self.phase_ctr]
+        self.song_ctr = 0
+        self.next_song()
+
     def run(self):
         self.current_phase = self.phases[self.phase_ctr]
         song = self.current_phase[self.song_ctr]
@@ -122,7 +133,7 @@ class BackgroundMusic(Thread):
 
                 change = False
                 if self.next_phase_event.is_set():
-                    self.phase_ctr += 1
+                    self.update_phase()
                     self.next_phase_event.clear()
                     change = True
                 if self.next_song_event.is_set():
