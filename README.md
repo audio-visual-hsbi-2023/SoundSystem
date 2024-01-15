@@ -62,4 +62,23 @@ Use the REGEX below to either start or stop the Music.
 
 ## Available SFX Sounds 🎶
 
-    birds (0:12)
+    a_calm_ambient
+    bells_soft
+    bell_ambient
+    birds
+    cymbal_impact
+    dreaming_forest
+    enchanted
+    forest
+    it_s_morning
+    journey_through_space
+    keys_of_relaxation
+    lifting_guitar
+    metal_grinding
+    metal_whoosh_ambient
+    piano_ambient
+    ping_contact
+    sharp
+    short_logo
+    sisters_voices
+    soft_rain_umbrella
