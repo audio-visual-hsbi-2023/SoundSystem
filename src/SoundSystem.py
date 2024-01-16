@@ -1,5 +1,6 @@
 import logging
 import argparse
+import time
 
 from queue import Queue
 
@@ -51,6 +52,7 @@ def main():
     logging.debug("Starting background threads for server and music...")
     server.start()
     bgm.start()
+    bgm.play_music()
 
     while True:
         logging.debug("waiting for incoming command...")

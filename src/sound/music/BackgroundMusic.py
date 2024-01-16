@@ -101,7 +101,7 @@ class BackgroundMusic(Thread):
     def update_phase(self):
         # check if already is at last phase
         if self.phase_ctr == len(self.phases) - 1:
-            logging.error("Can't continue with p hases. Already the last!")
+            logging.error("Can't continue with phases. Already the last!")
             return
 
         self.phase_ctr += 1
@@ -109,24 +109,31 @@ class BackgroundMusic(Thread):
         self.song_ctr = 0
         self.next_song()
 
+    def update_chunks_fade_out(self, chunk_ctr):
+        ctr_in_ms = (chunk_ctr * Config.CHUNK_SIZE) / self.ms_ctr
+        current_audio_to_end = self.segment[:(ctr_in_ms + Config.FADE_TIME + 1500)]
+        new_segment = current_audio_to_end.fade_out(Config.FADE_TIME)
+        return AudioSegmentHelper.into_chunks(new_segment)
+
     def run(self):
         self.current_phase = self.phases[self.phase_ctr]
         song = self.current_phase[self.song_ctr]
-        # TODO remove magic numbers
-        self.segment = AudioSegmentHelper.load_audio_segment(str(song))[-20000:-10000]
-        self.ms_ctr = AudioSegmentHelper.ms_to_segment_chunk_index(self.segment, 1)
-        while True:
-            stream = self.audio.open(
-                format=self.audio.get_format_from_width(self.segment.sample_width),
-                channels=self.segment.channels,
-                rate=self.segment.frame_rate,
-                output=True
-            )
 
-            chunks = AudioSegmentHelper.into_chunks(self.segment)
-            chunk_ctr = 0
+        response = AudioSegmentHelper.load_audio_segment_and_stream(str(song), self.audio)
+        self.segment = response.segment
+        stream: pyaudio.Stream = response.stream
+        chunks = response.chunks
+
+        self.ms_ctr = AudioSegmentHelper.ms_to_segment_chunk_index(self.segment, 1)
+        chunk_ctr = 0
+        self.profiler.start()
+        while True:
+            ctr_since_skip = 0
+            skipping = False
             self.loading = None
             loader: AudioSegmentAsyncLoader | None = None
+            self.profiler.end()
+            logging.debug(f"Time elapsed for preparing next song {self.profiler.time_elapsed}")
             while chunk_ctr <= len(chunks):
                 if loader is not None and self.loading and not loader.is_alive():
                     self.loading = False
@@ -142,9 +149,18 @@ class BackgroundMusic(Thread):
                     self.next_song_event.clear()
                     change = True
                 if change:
-                    loader = AudioSegmentAsyncLoader(str(self.current_phase[self.song_ctr]))
+                    ctr_in_ms = (chunk_ctr * Config.CHUNK_SIZE) / self.ms_ctr
+                    self.profiler.start()
+                    loader = AudioSegmentAsyncLoader(
+                        filename=str(self.current_phase[self.song_ctr]),
+                        pyaudio=self.audio,
+                        current_remain=(self.segment, ctr_in_ms)
+                    )
                     loader.start()
-                    self.loading = True
+                    self.profiler.end()
+                    logging.debug(f"Time elapsed for starting async loader {self.profiler.time_elapsed}")
+
+                self.loading = True
 
                 if self.pause_event.is_set():
                     continue
@@ -154,16 +170,20 @@ class BackgroundMusic(Thread):
 
                 stream.write(chunks[chunk_ctr])
                 chunk_ctr += 1
+                if skipping:
+                    ctr_since_skip += 1
 
-                if (((len(chunks) - 1) * Config.CHUNK_SIZE) - self.ms_ctr * (Config.CROSSFADE_TIME + 1500)) <= \
+                # end of song approaching, prepare new song
+                if (((len(chunks) - 1) * Config.CHUNK_SIZE) - self.ms_ctr * (Config.FADE_TIME + 1500)) <= \
                         chunk_ctr * Config.CHUNK_SIZE <= \
-                        ((len(chunks) * Config.CHUNK_SIZE) - (self.ms_ctr * (Config.CROSSFADE_TIME + 1500))):
+                        ((len(chunks) * Config.CHUNK_SIZE) - (self.ms_ctr * (Config.FADE_TIME + 1500))):
                     self.next_song()
 
                 # END OF WHILE (chunks)
                 # ---------------------
 
-            stream.close()
+            self.profiler.start()
+            # stream.close()
             if self.phase_ctr == len(self.phases):
                 break
 
@@ -172,14 +192,29 @@ class BackgroundMusic(Thread):
 
             while loader.is_alive():
                 # Wait until audio is loaded
+                logging.debug("Waiting for loader...")
                 pass
 
+            # Take end of segment
+            # give it into loader
+            # give loader like 0.5 sec time
+            # make fade out and fade in
+            # concat end of current with new and update chunks
+            # after updating chunks, reset chunk_ctr
+
+            self.segment = loader.response.segment
+            # stream = loader.response.stream
+            chunks = loader.response.chunks
+            chunk_ctr = ctr_since_skip + 1
+
+            """
             self.profiler.start()
             ctr_in_ms = (chunk_ctr * Config.CHUNK_SIZE) / self.ms_ctr
-            current_audio_end = self.segment[ctr_in_ms:(ctr_in_ms+Config.CROSSFADE_TIME)]
-            self.segment = current_audio_end.append(loader.audio_data, crossfade=Config.CROSSFADE_TIME)
+            current_audio_end = self.segment[ctr_in_ms:(ctr_in_ms + Config.FADE_TIME)]
+            self.segment = current_audio_end.append(loader.audio_data, crossfade=Config.FADE_TIME)
             self.profiler.end()
             logging.debug(f"Time elapsed for preparing new audio segment {self.profiler.time_elapsed}")
+            """
 
         # END OF WHILE
         # ------------
