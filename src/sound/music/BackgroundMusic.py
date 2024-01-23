@@ -195,26 +195,10 @@ class BackgroundMusic(Thread):
                 logging.debug("Waiting for loader...")
                 pass
 
-            # Take end of segment
-            # give it into loader
-            # give loader like 0.5 sec time
-            # make fade out and fade in
-            # concat end of current with new and update chunks
-            # after updating chunks, reset chunk_ctr
-
             self.segment = loader.response.segment
             # stream = loader.response.stream
             chunks = loader.response.chunks
             chunk_ctr = ctr_since_skip + 1
-
-            """
-            self.profiler.start()
-            ctr_in_ms = (chunk_ctr * Config.CHUNK_SIZE) / self.ms_ctr
-            current_audio_end = self.segment[ctr_in_ms:(ctr_in_ms + Config.FADE_TIME)]
-            self.segment = current_audio_end.append(loader.audio_data, crossfade=Config.FADE_TIME)
-            self.profiler.end()
-            logging.debug(f"Time elapsed for preparing new audio segment {self.profiler.time_elapsed}")
-            """
 
         # END OF WHILE
         # ------------
