@@ -10,16 +10,6 @@ from src.server.SoundSystemServer import SoundSystemServer
 from src.sound.music.BackgroundMusic import BackgroundMusic
 
 
-def create_cli_interface():
-    parser = argparse.ArgumentParser(
-        prog="SoundSystem",
-        description="Plays pre-defined sequence of background music phases"
-                    "and queries sfx sounds on a 180 degree spectrum over"
-                    "network requests"
-    )
-    parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-d", "--dummy", action="store_true")
-
 
 def normalize_angle_to_float(angle: float) -> float:
     # Normalize the angle to the range [0, 1]
