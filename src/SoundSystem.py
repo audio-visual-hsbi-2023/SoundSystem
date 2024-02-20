@@ -1,5 +1,6 @@
 import logging
 import argparse
+import sys
 
 from queue import Queue
 
@@ -63,7 +64,7 @@ def main():
             case CommandType.START:
                 bgm.play_music()
             case CommandType.EXIT:
-                return
+                sys.exit(0)
             case CommandType.NEXT_SONG:
                 bgm.next_song()
             case CommandType.SFX:

@@ -112,8 +112,7 @@ class BackgroundMusic(Thread):
     def run(self):
         self.current_phase = self.phases[self.phase_ctr]
         song = self.current_phase[self.song_ctr]
-        # TODO remove magic numbers
-        self.segment = AudioSegmentHelper.load_audio_segment(str(song))[-20000:-10000]
+        self.segment = AudioSegmentHelper.load_audio_segment(str(song))
         self.ms_ctr = AudioSegmentHelper.ms_to_segment_chunk_index(self.segment, 1)
         while True:
             stream = self.audio.open(
